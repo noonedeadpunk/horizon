@@ -30,8 +30,22 @@ class OverviewTab(tabs.Tab):
     template_name = "project/networks/ports/_detail_overview.html"
 
     def get_context_data(self, request):
+        def get_security_groups(sg_ids):
+            # Avoid extra API calls if no security group is associated.
+            if not sg_ids:
+                return []
+            try:
+                security_groups = api.neutron.security_group_list(request,
+                                                                  id=sg_ids)
+            except Exception:
+                security_groups = []
+                msg = _("Unable to retrieve security groups for the port.")
+                exceptions.handle(request, msg)
+            return security_groups
+
         port = self.tab_group.kwargs['port']
-        return {'port': port}
+        security_groups = get_security_groups(port.security_group_ids)
+        return {'port': port, 'security_groups': security_groups}
 
 
 class PortDetailTabs(tabs.DetailTabsGroup):
